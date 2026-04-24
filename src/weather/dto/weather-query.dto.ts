@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsNotEmpty, IsString } from 'class-validator';
+import { IsForecastDate } from '../../common/validation/is-forecast-date.decorator';
 import { IsStrictIsoDate } from '../../common/validation/is-strict-iso-date.decorator';
 
 export class WeatherQueryDto {
@@ -18,5 +19,6 @@ export class WeatherQueryDto {
   })
   @IsString()
   @IsStrictIsoDate()
+  @IsForecastDate()
   date: string;
 }
