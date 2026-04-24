@@ -10,17 +10,59 @@ describe('AppController (e2e)', () => {
   let fetchMock: jest.SpiedFunction<typeof fetch>;
 
   beforeEach(async () => {
-    fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        daily: {
-          time: ['2026-04-23'],
-          weather_code: [3],
-          temperature_2m_min: [9.2],
-          temperature_2m_max: [21.8],
-        },
-      }),
-    } as Response);
+    process.env.OPENAI_API_KEY = 'test-openai-key';
+    delete process.env.OPENAI_BASE_URL;
+    delete process.env.OPENAI_MODEL;
+
+    fetchMock = jest.spyOn(global, 'fetch').mockImplementation(
+      async (input: string | URL | Request) => {
+        const url =
+          typeof input === 'string'
+            ? input
+            : input instanceof URL
+              ? input.toString()
+              : input.url;
+
+        if (url.includes('open-meteo.com')) {
+          return {
+            ok: true,
+            json: async () => ({
+              daily: {
+                time: ['2026-04-23'],
+                weather_code: [3],
+                temperature_2m_min: [9.2],
+                temperature_2m_max: [21.8],
+              },
+            }),
+          } as Response;
+        }
+
+        if (url.endsWith('/responses')) {
+          return {
+            ok: true,
+            json: async () => ({
+              output: [
+                {
+                  type: 'message',
+                  content: [
+                    {
+                      type: 'output_text',
+                      text: JSON.stringify({
+                        breakfast: 'Avena con fruta y te',
+                        lunch: 'Crema de zapallo con quinoa',
+                        dinner: 'Tortilla de verduras y ensalada tibia',
+                      }),
+                    },
+                  ],
+                },
+              ],
+            }),
+          } as Response;
+        }
+
+        throw new Error(`Unexpected fetch URL: ${url}`);
+      },
+    );
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
@@ -33,6 +75,9 @@ describe('AppController (e2e)', () => {
 
   afterEach(async () => {
     fetchMock.mockRestore();
+    delete process.env.OPENAI_API_KEY;
+    delete process.env.OPENAI_BASE_URL;
+    delete process.env.OPENAI_MODEL;
     await app.close();
   });
 
@@ -83,6 +128,33 @@ describe('AppController (e2e)', () => {
       });
   });
 
+  it('/api/v1/menu/suggest (POST)', () => {
+    return request(app.getHttpServer())
+      .post('/api/v1/menu/suggest')
+      .send({
+        location: 'Santiago',
+        date: '2026-04-23',
+        preferences: ['vegetarian', 'gluten-free'],
+      })
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body).toEqual({
+          location: 'Santiago',
+          date: '2026-04-23',
+          weather: {
+            summary: 'Partly cloudy',
+            temperatureMin: 9.2,
+            temperatureMax: 21.8,
+          },
+          menu: {
+            breakfast: 'Avena con fruta y te',
+            lunch: 'Crema de zapallo con quinoa',
+            dinner: 'Tortilla de verduras y ensalada tibia',
+          },
+        });
+      });
+  });
+
   it('/api/docs-json (GET)', () => {
     return request(app.getHttpServer())
       .get('/api/docs-json')
@@ -91,6 +163,7 @@ describe('AppController (e2e)', () => {
         expect(body.openapi).toBe('3.0.0');
         expect(body.paths['/api/v1/locations/chile']).toBeDefined();
         expect(body.paths['/api/v1/weather']).toBeDefined();
+        expect(body.paths['/api/v1/menu/suggest']).toBeDefined();
       });
   });
 });

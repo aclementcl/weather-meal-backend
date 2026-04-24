@@ -8,5 +8,6 @@ import { WeatherService } from './weather.service';
   imports: [LocationsModule],
   controllers: [WeatherController],
   providers: [WeatherService, OpenMeteoWeatherProvider],
+  exports: [WeatherService],
 })
 export class WeatherModule {}
