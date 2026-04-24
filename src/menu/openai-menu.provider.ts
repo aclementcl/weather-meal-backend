@@ -3,15 +3,15 @@ import {
   Injectable,
   InternalServerErrorException,
 } from '@nestjs/common';
+import { SuggestedMenuDto } from './dto/menu-suggest-response.dto';
 import {
   MenuAiInput,
   OpenAiResponsesApiResponse,
-  SuggestedMenu,
 } from './menu.types';
 
 @Injectable()
 export class OpenAiMenuProvider {
-  async suggestMenu(input: MenuAiInput): Promise<SuggestedMenu> {
+  async suggestMenu(input: MenuAiInput): Promise<SuggestedMenuDto> {
     const apiKey = process.env.OPENAI_API_KEY;
 
     if (!apiKey) {
@@ -111,7 +111,7 @@ export class OpenAiMenuProvider {
     ].join(' ');
   }
 
-  private isSuggestedMenu(value: unknown): value is SuggestedMenu {
+  private isSuggestedMenu(value: unknown): value is SuggestedMenuDto {
     if (!value || typeof value !== 'object') {
       return false;
     }

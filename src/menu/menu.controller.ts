@@ -6,8 +6,9 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { MenuSuggestRequestDto } from './dto/menu-suggest-request.dto';
+import { MenuSuggestResponseDto } from './dto/menu-suggest-response.dto';
 import { MenuService } from './menu.service';
-import { MenuSuggestRequest, MenuSuggestResponse } from './menu.types';
 
 @ApiTags('menu')
 @Controller({
@@ -21,11 +22,11 @@ export class MenuController {
     summary: 'Suggest a daily menu using weather and dietary preferences',
   })
   @ApiBody({
-    type: MenuSuggestRequest,
+    type: MenuSuggestRequestDto,
   })
   @ApiOkResponse({
     description: 'Menu suggestion normalized for frontend consumption.',
-    type: MenuSuggestResponse,
+    type: MenuSuggestResponseDto,
   })
   @ApiNotFoundResponse({
     description: 'The requested city is not supported by the static catalog.',
@@ -33,8 +34,8 @@ export class MenuController {
   @HttpCode(HttpStatus.OK)
   @Post('suggest')
   suggestMenu(
-    @Body() request: MenuSuggestRequest,
-  ): Promise<MenuSuggestResponse> {
+    @Body() request: MenuSuggestRequestDto,
+  ): Promise<MenuSuggestResponseDto> {
     return this.menuService.suggestMenu(request);
   }
 }

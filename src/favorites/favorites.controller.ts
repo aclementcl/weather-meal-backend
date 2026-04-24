@@ -7,7 +7,8 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { FavoriteCreateRequest, FavoriteItem } from './favorites.types';
+import { FavoriteCreateDto } from './dto/favorite-create.dto';
+import { FavoriteItemDto } from './dto/favorite-item.dto';
 import { FavoritesService } from './favorites.service';
 
 @ApiTags('favorites')
@@ -23,11 +24,11 @@ export class FavoritesController {
   })
   @ApiOkResponse({
     description: 'Saved favorite menu suggestions.',
-    type: FavoriteItem,
+    type: FavoriteItemDto,
     isArray: true,
   })
   @Get()
-  getFavorites(): FavoriteItem[] {
+  getFavorites(): FavoriteItemDto[] {
     return this.favoritesService.getFavorites();
   }
 
@@ -36,10 +37,10 @@ export class FavoritesController {
   })
   @ApiCreatedResponse({
     description: 'Favorite menu suggestion saved successfully.',
-    type: FavoriteItem,
+    type: FavoriteItemDto,
   })
   @Post()
-  createFavorite(@Body() request: FavoriteCreateRequest): FavoriteItem {
+  createFavorite(@Body() request: FavoriteCreateDto): FavoriteItemDto {
     return this.favoritesService.createFavorite(request);
   }
 

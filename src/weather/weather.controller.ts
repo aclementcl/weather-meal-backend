@@ -3,11 +3,11 @@ import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
-  ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
+import { WeatherQueryDto } from './dto/weather-query.dto';
+import { WeatherResponseDto } from './dto/weather-response.dto';
 import { WeatherService } from './weather.service';
-import { WeatherResponse } from './weather.types';
 
 @ApiTags('weather')
 @Controller({
@@ -20,28 +20,15 @@ export class WeatherController {
   @ApiOperation({
     summary: 'Get normalized weather for a supported Chilean city',
   })
-  @ApiQuery({
-    name: 'city',
-    required: true,
-    example: 'Santiago',
-  })
-  @ApiQuery({
-    name: 'date',
-    required: true,
-    example: '2026-04-23',
-  })
   @ApiOkResponse({
     description: 'Normalized weather response for Angular consumption.',
-    type: WeatherResponse,
+    type: WeatherResponseDto,
   })
   @ApiNotFoundResponse({
     description: 'The requested city is not supported by the static catalog.',
   })
   @Get()
-  getWeather(
-    @Query('city') city: string,
-    @Query('date') date: string,
-  ): Promise<WeatherResponse> {
-    return this.weatherService.getWeather(city, date);
+  getWeather(@Query() query: WeatherQueryDto): Promise<WeatherResponseDto> {
+    return this.weatherService.getWeather(query);
   }
 }

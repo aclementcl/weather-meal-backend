@@ -1,11 +1,8 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { LocationsService } from '../locations/locations.service';
+import { WeatherQueryDto } from './dto/weather-query.dto';
+import { WeatherResponseDto } from './dto/weather-response.dto';
 import { OpenMeteoWeatherProvider } from './open-meteo-weather.provider';
-import { WeatherResponse } from './weather.types';
 
 @Injectable()
 export class WeatherService {
@@ -14,31 +11,21 @@ export class WeatherService {
     private readonly openMeteoWeatherProvider: OpenMeteoWeatherProvider,
   ) {}
 
-  async getWeather(city: string, date: string): Promise<WeatherResponse> {
-    if (!city?.trim()) {
-      throw new BadRequestException('Query param "city" is required');
-    }
-
-    if (!this.isValidIsoDate(date)) {
-      throw new BadRequestException(
-        'Query param "date" must use yyyy-mm-dd format',
-      );
-    }
-
-    const location = this.locationsService.findChileLocationByName(city);
+  async getWeather(query: WeatherQueryDto): Promise<WeatherResponseDto> {
+    const location = this.locationsService.findChileLocationByName(query.city);
 
     if (!location) {
-      throw new NotFoundException(`Unsupported city: ${city}`);
+      throw new NotFoundException(`Unsupported city: ${query.city}`);
     }
 
     const providerWeather = await this.openMeteoWeatherProvider.getDailyWeather(
       location,
-      date,
+      query.date,
     );
 
     return {
       location,
-      date,
+      date: query.date,
       weather: {
         summary: this.mapWeatherCodeToSummary(providerWeather.weatherCode),
         temperatureMin: providerWeather.temperatureMin,
@@ -46,16 +33,6 @@ export class WeatherService {
         weatherCode: providerWeather.weatherCode,
       },
     };
-  }
-
-  private isValidIsoDate(value: string): boolean {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-      return false;
-    }
-
-    const date = new Date(`${value}T00:00:00Z`);
-
-    return !Number.isNaN(date.getTime()) && date.toISOString().startsWith(value);
   }
 
   private mapWeatherCodeToSummary(weatherCode?: number): string {
