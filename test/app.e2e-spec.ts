@@ -155,6 +155,49 @@ describe('AppController (e2e)', () => {
       });
   });
 
+  it('/api/v1/favorites (POST, GET, DELETE)', async () => {
+    const favoritePayload = {
+      location: 'Santiago',
+      date: '2026-04-23',
+      weather: {
+        summary: 'Partly cloudy',
+        temperatureMin: 9.2,
+        temperatureMax: 21.8,
+      },
+      menu: {
+        breakfast: 'Avena con fruta y te',
+        lunch: 'Crema de zapallo con quinoa',
+        dinner: 'Tortilla de verduras y ensalada tibia',
+      },
+    };
+
+    const createResponse = await request(app.getHttpServer())
+      .post('/api/v1/favorites')
+      .send(favoritePayload)
+      .expect(201);
+
+    expect(createResponse.body).toEqual({
+      id: expect.stringMatching(/^fav_/),
+      ...favoritePayload,
+    });
+
+    await request(app.getHttpServer())
+      .get('/api/v1/favorites')
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body).toEqual([createResponse.body]);
+      });
+
+    await request(app.getHttpServer())
+      .delete(`/api/v1/favorites/${createResponse.body.id}`)
+      .expect(204);
+
+    await request(app.getHttpServer())
+      .get('/api/v1/favorites')
+      .expect(200)
+      .expect([]);
+  });
+
   it('/api/docs-json (GET)', () => {
     return request(app.getHttpServer())
       .get('/api/docs-json')
@@ -164,6 +207,8 @@ describe('AppController (e2e)', () => {
         expect(body.paths['/api/v1/locations/chile']).toBeDefined();
         expect(body.paths['/api/v1/weather']).toBeDefined();
         expect(body.paths['/api/v1/menu/suggest']).toBeDefined();
+        expect(body.paths['/api/v1/favorites']).toBeDefined();
+        expect(body.paths['/api/v1/favorites/{id}']).toBeDefined();
       });
   });
 });
