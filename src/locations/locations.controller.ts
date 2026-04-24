@@ -14,11 +14,11 @@ export class LocationsController {
   @ApiOperation({
     summary: 'List supported Chilean cities',
   })
-  @ApiOkResponse({
-    description: 'Supported Chilean locations for the city selector.',
-    type: Location,
-    isArray: true,
-  })
+  // @ApiOkResponse({
+  //   description: 'Supported Chilean locations for the city selector.',
+  //   type: Location,
+  //   isArray: true,
+  // })
   @Get('chile')
   getChileLocations(): Location[] {
     return this.locationsService.getChileLocations();
