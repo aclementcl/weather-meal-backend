@@ -11,11 +11,14 @@ export class WeatherService {
     private readonly openMeteoWeatherProvider: OpenMeteoWeatherProvider,
   ) {}
 
-  async getWeather(query: WeatherQueryDto): Promise<WeatherResponseDto> {
-    const location = this.locationsService.findChileLocationByName(query.city);
+  async getWeather(
+    cityId: string,
+    query: WeatherQueryDto,
+  ): Promise<WeatherResponseDto> {
+    const location = this.locationsService.findChileLocationById(cityId);
 
     if (!location) {
-      throw new NotFoundException(`Unsupported city: ${query.city}`);
+      throw new NotFoundException(`Unsupported city: ${cityId}`);
     }
 
     const providerWeather = await this.openMeteoWeatherProvider.getDailyWeather(

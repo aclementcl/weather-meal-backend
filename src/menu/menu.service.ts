@@ -15,11 +15,12 @@ export class MenuService {
   ) {}
 
   async suggestMenu(
+    cityId: string,
     request: MenuSuggestRequestDto,
   ): Promise<MenuSuggestResponseDto> {
     const weatherResponse = await this.weatherService.getWeather(
+      cityId,
       {
-        city: request.location,
         date: request.date,
       },
     );

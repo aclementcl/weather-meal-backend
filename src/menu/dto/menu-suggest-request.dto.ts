@@ -12,14 +12,6 @@ import { IsStrictIsoDate } from '../../common/validation/is-strict-iso-date.deco
 
 export class MenuSuggestRequestDto {
   @ApiProperty({
-    example: 'Santiago',
-  })
-  @IsString()
-  @IsNotEmpty()
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
-  location: string;
-
-  @ApiProperty({
     example: '2026-04-23',
     description: 'ISO 8601 date in yyyy-mm-dd format.',
   })

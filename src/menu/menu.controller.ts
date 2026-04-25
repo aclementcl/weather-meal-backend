@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
 import {
   ApiBody,
   ApiNotFoundResponse,
@@ -12,7 +12,7 @@ import { MenuService } from './menu.service';
 
 @ApiTags('menu')
 @Controller({
-  path: 'menu',
+  path: 'locations/chile/cities/:cityId/menu-suggestions',
   version: '1',
 })
 export class MenuController {
@@ -32,10 +32,11 @@ export class MenuController {
     description: 'The requested city is not supported by the static catalog.',
   })
   @HttpCode(HttpStatus.OK)
-  @Post('suggest')
+  @Post()
   suggestMenu(
+    @Param('cityId') cityId: string,
     @Body() request: MenuSuggestRequestDto,
   ): Promise<MenuSuggestResponseDto> {
-    return this.menuService.suggestMenu(request);
+    return this.menuService.suggestMenu(cityId, request);
   }
 }

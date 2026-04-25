@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import {
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -11,7 +11,7 @@ import { WeatherService } from './weather.service';
 
 @ApiTags('weather')
 @Controller({
-  path: 'weather',
+  path: 'locations/chile/cities/:cityId/weather',
   version: '1',
 })
 export class WeatherController {
@@ -28,7 +28,10 @@ export class WeatherController {
     description: 'The requested city is not supported by the static catalog.',
   })
   @Get()
-  getWeather(@Query() query: WeatherQueryDto): Promise<WeatherResponseDto> {
-    return this.weatherService.getWeather(query);
+  getWeather(
+    @Param('cityId') cityId: string,
+    @Query() query: WeatherQueryDto,
+  ): Promise<WeatherResponseDto> {
+    return this.weatherService.getWeather(cityId, query);
   }
 }
