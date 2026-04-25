@@ -1,8 +1,11 @@
 import {
   BadGatewayException,
+  HttpException,
   Injectable,
   InternalServerErrorException,
+  Logger,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { SuggestedMenuDto } from './dto/menu-suggest-response.dto';
 import {
   MenuAiInput,
@@ -11,82 +14,111 @@ import {
 
 @Injectable()
 export class OpenAiMenuProvider {
+  private readonly logger = new Logger(OpenAiMenuProvider.name);
+
+  constructor(private readonly configService: ConfigService) {}
+
   async suggestMenu(input: MenuAiInput): Promise<SuggestedMenuDto> {
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = this.configService.get<string>('OPENAI_API_KEY');
 
     if (!apiKey) {
+      this.logger.error('OPENAI_API_KEY is not configured');
       throw new InternalServerErrorException(
         'OPENAI_API_KEY is not configured',
       );
     }
 
-    const baseUrl = process.env.OPENAI_BASE_URL ?? 'https://api.openai.com/v1';
-    const response = await fetch(`${baseUrl}/responses`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: process.env.OPENAI_MODEL ?? 'gpt-4.1-mini',
-        input: this.buildPrompt(input),
-        max_output_tokens: 300,
-        text: {
-          format: {
-            type: 'json_schema',
-            name: 'menu_suggestion',
-            strict: true,
-            schema: {
-              type: 'object',
-              additionalProperties: false,
-              properties: {
-                breakfast: {
-                  type: 'string',
-                },
-                lunch: {
-                  type: 'string',
-                },
-                dinner: {
-                  type: 'string',
-                },
-              },
-              required: ['breakfast', 'lunch', 'dinner'],
-            },
-          },
-        },
-      }),
-    });
-
-    if (!response.ok) {
-      throw new BadGatewayException('AI provider request failed');
-    }
-
-    const payload = (await response.json()) as OpenAiResponsesApiResponse;
-    const outputText = payload.output
-      ?.flatMap((item) => item.content ?? [])
-      .find((content) => content.type === 'output_text')?.text;
-
-    if (!outputText) {
-      throw new BadGatewayException('AI provider returned no output text');
-    }
-
-    let parsedMenu: unknown;
+    const baseUrl =
+      this.configService.get<string>('OPENAI_BASE_URL') ??
+      'https://api.openai.com/v1';
+    const model =
+      this.configService.get<string>('OPENAI_MODEL') ?? 'gpt-4.1-mini';
 
     try {
-      parsedMenu = JSON.parse(outputText);
-    } catch {
-      throw new BadGatewayException('AI provider returned invalid JSON');
-    }
+      this.logger.log(
+        `Requesting menu suggestion from OpenAI for ${input.location} on ${input.date}`,
+      );
 
-    if (!this.isSuggestedMenu(parsedMenu)) {
-      throw new BadGatewayException('AI provider returned an invalid menu');
-    }
+      const response = await fetch(`${baseUrl}/responses`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model,
+          input: this.buildPrompt(input),
+          max_output_tokens: 300,
+          text: {
+            format: {
+              type: 'json_schema',
+              name: 'menu_suggestion',
+              strict: true,
+              schema: {
+                type: 'object',
+                additionalProperties: false,
+                properties: {
+                  breakfast: {
+                    type: 'string',
+                  },
+                  lunch: {
+                    type: 'string',
+                  },
+                  dinner: {
+                    type: 'string',
+                  },
+                },
+                required: ['breakfast', 'lunch', 'dinner'],
+              },
+            },
+          },
+        }),
+      });
 
-    return {
-      breakfast: parsedMenu.breakfast.trim(),
-      lunch: parsedMenu.lunch.trim(),
-      dinner: parsedMenu.dinner.trim(),
-    };
+      if (!response.ok) {
+        this.logger.error(`AI provider request failed with status ${response.status}`);
+        throw new BadGatewayException('AI provider request failed');
+      }
+
+      const payload = (await response.json()) as OpenAiResponsesApiResponse;
+      const outputText = payload.output
+        ?.flatMap((item) => item.content ?? [])
+        .find((content) => content.type === 'output_text')?.text;
+
+      if (!outputText) {
+        this.logger.error('AI provider returned no output text');
+        throw new BadGatewayException('AI provider returned no output text');
+      }
+
+      let parsedMenu: unknown;
+
+      try {
+        parsedMenu = JSON.parse(outputText);
+      } catch {
+        this.logger.error('AI provider returned invalid JSON');
+        throw new BadGatewayException('AI provider returned invalid JSON');
+      }
+
+      if (!this.isSuggestedMenu(parsedMenu)) {
+        this.logger.error('AI provider returned an invalid menu shape');
+        throw new BadGatewayException('AI provider returned an invalid menu');
+      }
+
+      return {
+        breakfast: parsedMenu.breakfast.trim(),
+        lunch: parsedMenu.lunch.trim(),
+        dinner: parsedMenu.dinner.trim(),
+      };
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      this.logger.error(
+        `Unexpected error while requesting AI menu suggestion: ${this.getErrorMessage(error)}`,
+      );
+      throw new BadGatewayException('AI provider request failed');
+    }
   }
 
   private buildPrompt(input: MenuAiInput): string {
@@ -122,5 +154,9 @@ export class OpenAiMenuProvider {
       (field) =>
         typeof menu[field] === 'string' && (menu[field] as string).trim().length,
     );
+  }
+
+  private getErrorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : 'Unknown error';
   }
 }

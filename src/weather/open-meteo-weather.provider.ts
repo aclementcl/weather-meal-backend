@@ -1,4 +1,10 @@
-import { BadGatewayException, Injectable } from '@nestjs/common';
+import {
+  BadGatewayException,
+  HttpException,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Location } from '../locations/locations.types';
 import {
   OpenMeteoDailyResponse,
@@ -7,54 +13,85 @@ import {
 
 @Injectable()
 export class OpenMeteoWeatherProvider {
+  private readonly logger = new Logger(OpenMeteoWeatherProvider.name);
   private static readonly DAILY_FIELDS = [
     'weather_code',
     'temperature_2m_min',
     'temperature_2m_max',
   ].join(',');
 
+  constructor(private readonly configService: ConfigService) {}
+
   async getDailyWeather(
     location: Location,
     date: string,
   ): Promise<WeatherProviderDailyForecast> {
-    const endpoint = this.getEndpointForDate(date);
-    const url = new URL(endpoint);
+    try {
+      const endpoint = this.getEndpointForDate(date);
+      const url = new URL(endpoint);
 
-    url.searchParams.set('latitude', String(location.latitude));
-    url.searchParams.set('longitude', String(location.longitude));
-    url.searchParams.set('daily', OpenMeteoWeatherProvider.DAILY_FIELDS);
-    url.searchParams.set('timezone', 'auto');
-    url.searchParams.set('start_date', date);
-    url.searchParams.set('end_date', date);
+      url.searchParams.set('latitude', String(location.latitude));
+      url.searchParams.set('longitude', String(location.longitude));
+      url.searchParams.set('daily', OpenMeteoWeatherProvider.DAILY_FIELDS);
+      url.searchParams.set('timezone', 'auto');
+      url.searchParams.set('start_date', date);
+      url.searchParams.set('end_date', date);
 
-    const response = await fetch(url);
+      this.logger.log(
+        `Requesting weather for ${location.name} (${location.latitude}, ${location.longitude}) on ${date}`,
+      );
 
-    if (!response.ok) {
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        this.logger.error(
+          `Weather provider request failed with status ${response.status}`,
+        );
+        throw new BadGatewayException('Weather provider request failed');
+      }
+
+      const payload = (await response.json()) as OpenMeteoDailyResponse;
+      const daily = payload.daily;
+
+      if (
+        !daily?.time?.length ||
+        !daily.temperature_2m_min?.length ||
+        !daily.temperature_2m_max?.length
+      ) {
+        this.logger.error('Weather provider returned incomplete data');
+        throw new BadGatewayException(
+          'Weather provider returned incomplete data',
+        );
+      }
+
+      return {
+        temperatureMin: daily.temperature_2m_min[0],
+        temperatureMax: daily.temperature_2m_max[0],
+        weatherCode: daily.weather_code?.[0],
+      };
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      this.logger.error(
+        `Unexpected weather provider error: ${this.getErrorMessage(error)}`,
+      );
       throw new BadGatewayException('Weather provider request failed');
     }
-
-    const payload = (await response.json()) as OpenMeteoDailyResponse;
-    const daily = payload.daily;
-
-    if (
-      !daily?.time?.length ||
-      !daily.temperature_2m_min?.length ||
-      !daily.temperature_2m_max?.length
-    ) {
-      throw new BadGatewayException('Weather provider returned incomplete data');
-    }
-
-    return {
-      temperatureMin: daily.temperature_2m_min[0],
-      temperatureMax: daily.temperature_2m_max[0],
-      weatherCode: daily.weather_code?.[0],
-    };
   }
 
   private getEndpointForDate(date: string): string {
+    const forecastBaseUrl =
+      this.configService.get<string>('WEATHER_API_FORECAST_BASE_URL') ??
+      'https://api.open-meteo.com/v1/forecast';
+    const archiveBaseUrl =
+      this.configService.get<string>('WEATHER_API_ARCHIVE_BASE_URL') ??
+      'https://archive-api.open-meteo.com/v1/archive';
+
     return date < this.getTodayInChile()
-      ? 'https://archive-api.open-meteo.com/v1/archive'
-      : 'https://api.open-meteo.com/v1/forecast';
+      ? archiveBaseUrl
+      : forecastBaseUrl;
   }
 
   private getTodayInChile(): string {
@@ -74,5 +111,9 @@ export class OpenMeteoWeatherProvider {
     }
 
     return `${year}-${month}-${day}`;
+  }
+
+  private getErrorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : 'Unknown error';
   }
 }

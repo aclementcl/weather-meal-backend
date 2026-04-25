@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { LocationsService } from '../locations/locations.service';
 import { WeatherQueryDto } from './dto/weather-query.dto';
 import { WeatherResponseDto } from './dto/weather-response.dto';
@@ -6,6 +10,8 @@ import { OpenMeteoWeatherProvider } from './open-meteo-weather.provider';
 
 @Injectable()
 export class WeatherService {
+  private readonly logger = new Logger(WeatherService.name);
+
   constructor(
     private readonly locationsService: LocationsService,
     private readonly openMeteoWeatherProvider: OpenMeteoWeatherProvider,
@@ -15,27 +21,39 @@ export class WeatherService {
     cityId: string,
     query: WeatherQueryDto,
   ): Promise<WeatherResponseDto> {
-    const location = this.locationsService.findChileLocationById(cityId);
+    try {
+      const location = this.locationsService.findChileLocationById(cityId);
 
-    if (!location) {
-      throw new NotFoundException(`Unsupported city: ${cityId}`);
+      if (!location) {
+        this.logger.warn(`Unsupported city requested: ${cityId}`);
+        throw new NotFoundException(`Unsupported city: ${cityId}`);
+      }
+
+      this.logger.log(
+        `Resolving weather for city ${location.name} on ${query.date}`,
+      );
+
+      const providerWeather = await this.openMeteoWeatherProvider.getDailyWeather(
+        location,
+        query.date,
+      );
+
+      return {
+        location,
+        date: query.date,
+        weather: {
+          summary: this.mapWeatherCodeToSummary(providerWeather.weatherCode),
+          temperatureMin: providerWeather.temperatureMin,
+          temperatureMax: providerWeather.temperatureMax,
+          weatherCode: providerWeather.weatherCode,
+        },
+      };
+    } catch (error) {
+      this.logger.error(
+        `Failed to resolve weather for city ${cityId}: ${this.getErrorMessage(error)}`,
+      );
+      throw error;
     }
-
-    const providerWeather = await this.openMeteoWeatherProvider.getDailyWeather(
-      location,
-      query.date,
-    );
-
-    return {
-      location,
-      date: query.date,
-      weather: {
-        summary: this.mapWeatherCodeToSummary(providerWeather.weatherCode),
-        temperatureMin: providerWeather.temperatureMin,
-        temperatureMax: providerWeather.temperatureMax,
-        weatherCode: providerWeather.weatherCode,
-      },
-    };
   }
 
   private mapWeatherCodeToSummary(weatherCode?: number): string {
@@ -92,5 +110,9 @@ export class WeatherService {
     }
 
     return 'Unknown';
+  }
+
+  private getErrorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : 'Unknown error';
   }
 }
