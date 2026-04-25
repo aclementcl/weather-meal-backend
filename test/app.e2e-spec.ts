@@ -4,16 +4,17 @@ import * as request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
 import { setupApp } from './../src/app.setup';
+import { getCurrentChileIsoDate } from './../src/common/date/chile-date.util';
 
 describe('AppController (e2e)', () => {
   let app: INestApplication<App>;
   let fetchMock: jest.SpiedFunction<typeof fetch>;
-  const forecastDate = getTodayIsoDate();
+  const forecastDate = getCurrentChileIsoDate();
 
   beforeEach(async () => {
-    process.env.OPENAI_API_KEY = 'test-openai-key';
-    delete process.env.OPENAI_BASE_URL;
-    delete process.env.OPENAI_MODEL;
+    process.env.GEMINI_API_KEY = 'test-gemini-key';
+    delete process.env.GEMINI_BASE_URL;
+    delete process.env.GEMINI_MODEL;
 
     fetchMock = jest.spyOn(global, 'fetch').mockImplementation(
       async (input: string | URL | Request) => {
@@ -38,23 +39,23 @@ describe('AppController (e2e)', () => {
           } as Response;
         }
 
-        if (url.endsWith('/responses')) {
+        if (url.includes('generativelanguage.googleapis.com')) {
           return {
             ok: true,
             json: async () => ({
-              output: [
+              candidates: [
                 {
-                  type: 'message',
-                  content: [
-                    {
-                      type: 'output_text',
-                      text: JSON.stringify({
-                        breakfast: 'Avena con fruta y te',
-                        lunch: 'Crema de zapallo con quinoa',
-                        dinner: 'Tortilla de verduras y ensalada tibia',
-                      }),
-                    },
-                  ],
+                  content: {
+                    parts: [
+                      {
+                        text: JSON.stringify({
+                          breakfast: 'Avena con fruta y te',
+                          lunch: 'Crema de zapallo con quinoa',
+                          dinner: 'Tortilla de verduras y ensalada tibia',
+                        }),
+                      },
+                    ],
+                  },
                 },
               ],
             }),
@@ -76,9 +77,9 @@ describe('AppController (e2e)', () => {
 
   afterEach(async () => {
     fetchMock.mockRestore();
-    delete process.env.OPENAI_API_KEY;
-    delete process.env.OPENAI_BASE_URL;
-    delete process.env.OPENAI_MODEL;
+    delete process.env.GEMINI_API_KEY;
+    delete process.env.GEMINI_BASE_URL;
+    delete process.env.GEMINI_MODEL;
     await app.close();
   });
 
@@ -92,7 +93,7 @@ describe('AppController (e2e)', () => {
         expect(body).toEqual(
           expect.arrayContaining([
             expect.objectContaining({
-              id: 'metropolitana-de-santiago',
+              id: 7,
               name: 'Metropolitana de Santiago',
             }),
           ]),
@@ -102,7 +103,7 @@ describe('AppController (e2e)', () => {
 
   it('/api/v1/locations/chile/regions/:regionId/cities (GET)', () => {
     return request(app.getHttpServer())
-      .get('/api/v1/locations/chile/regions/metropolitana-de-santiago/cities')
+      .get('/api/v1/locations/chile/regions/7/cities')
       .expect(200)
       .expect(({ body }) => {
         expect(Array.isArray(body)).toBe(true);
@@ -110,9 +111,9 @@ describe('AppController (e2e)', () => {
         expect(body).toEqual(
           expect.arrayContaining([
             expect.objectContaining({
-              id: 'santiago',
+              id: 13,
               name: 'Santiago',
-              regionId: 'metropolitana-de-santiago',
+              regionId: 7,
               regionName: 'Metropolitana de Santiago',
               latitude: expect.any(Number),
               longitude: expect.any(Number),
@@ -124,7 +125,7 @@ describe('AppController (e2e)', () => {
 
   it('/api/v1/locations/chile/cities/:cityId/weather (GET)', () => {
     return request(app.getHttpServer())
-      .get('/api/v1/locations/chile/cities/santiago/weather')
+      .get('/api/v1/locations/chile/cities/13/weather')
       .query({
         date: forecastDate,
       })
@@ -132,9 +133,9 @@ describe('AppController (e2e)', () => {
       .expect(({ body }) => {
         expect(body).toEqual({
           location: expect.objectContaining({
-            id: 'santiago',
+            id: 13,
             name: 'Santiago',
-            regionId: 'metropolitana-de-santiago',
+            regionId: 7,
             regionName: 'Metropolitana de Santiago',
             latitude: -33.4489,
             longitude: -70.6693,
@@ -152,7 +153,7 @@ describe('AppController (e2e)', () => {
 
   it('/api/v1/locations/chile/cities/:cityId/menu-suggestions (POST)', () => {
     return request(app.getHttpServer())
-      .post('/api/v1/locations/chile/cities/santiago/menu-suggestions')
+      .post('/api/v1/locations/chile/cities/13/menu-suggestions')
       .send({
         date: forecastDate,
         preferences: ['vegetarian', 'gluten-free'],
@@ -198,7 +199,7 @@ describe('AppController (e2e)', () => {
       .expect(201);
 
     expect(createResponse.body).toEqual({
-      id: expect.stringMatching(/^fav_/),
+      id: 1,
       ...favoritePayload,
     });
 
@@ -240,12 +241,3 @@ describe('AppController (e2e)', () => {
       });
   });
 });
-
-function getTodayIsoDate(): string {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = `${today.getMonth() + 1}`.padStart(2, '0');
-  const day = `${today.getDate()}`.padStart(2, '0');
-
-  return `${year}-${month}-${day}`;
-}

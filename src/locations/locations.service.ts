@@ -8,7 +8,7 @@ export class LocationsService {
 
   getChileRegions(): Region[] {
     try {
-      const seenRegions = new Map<string, Region>();
+      const seenRegions = new Map<number, Region>();
 
       for (const location of CHILE_LOCATIONS) {
         if (!seenRegions.has(location.regionId)) {
@@ -33,12 +33,11 @@ export class LocationsService {
     }
   }
 
-  getChileCities(regionId?: string): City[] {
+  getChileCities(regionId?: number): City[] {
     try {
-      const normalizedRegionId = regionId?.trim().toLowerCase();
-      const cities = normalizedRegionId
+      const cities = regionId !== undefined
         ? CHILE_LOCATIONS.filter(
-            (location) => location.regionId === normalizedRegionId,
+            (location) => location.regionId === regionId,
           )
         : CHILE_LOCATIONS;
       const sortedCities = [...cities].sort((left, right) =>
@@ -46,8 +45,8 @@ export class LocationsService {
       );
 
       this.logger.log(
-        normalizedRegionId
-          ? `Resolved ${sortedCities.length} cities for region ${normalizedRegionId}`
+        regionId !== undefined
+          ? `Resolved ${sortedCities.length} cities for region ${regionId}`
           : `Resolved ${sortedCities.length} cities without region filter`,
       );
 
@@ -60,17 +59,16 @@ export class LocationsService {
     }
   }
 
-  findChileRegionById(regionId: string): Region | undefined {
+  findChileRegionById(regionId: number): Region | undefined {
     try {
-      const normalizedRegionId = regionId.trim().toLowerCase();
       const region = this.getChileRegions().find(
-        (candidate) => candidate.id === normalizedRegionId,
+        (candidate) => candidate.id === regionId,
       );
 
       this.logger.log(
         region
-          ? `Resolved region ${normalizedRegionId}`
-          : `Region not found: ${normalizedRegionId}`,
+          ? `Resolved region ${regionId}`
+          : `Region not found: ${regionId}`,
       );
 
       return region;
@@ -104,17 +102,16 @@ export class LocationsService {
     }
   }
 
-  findChileLocationById(cityId: string): Location | undefined {
+  findChileLocationById(cityId: number): Location | undefined {
     try {
-      const normalizedCityId = cityId.trim().toLowerCase();
       const location = CHILE_LOCATIONS.find(
-        (candidate) => candidate.id === normalizedCityId,
+        (candidate) => candidate.id === cityId,
       );
 
       this.logger.log(
         location
-          ? `Resolved city ${normalizedCityId}`
-          : `City not found: ${normalizedCityId}`,
+          ? `Resolved city ${cityId}`
+          : `City not found: ${cityId}`,
       );
 
       return location;

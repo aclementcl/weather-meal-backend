@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
 import {
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -29,7 +29,7 @@ export class WeatherController {
   })
   @Get()
   getWeather(
-    @Param('cityId') cityId: string,
+    @Param('cityId', ParseIntPipe) cityId: number,
     @Query() query: WeatherQueryDto,
   ): Promise<WeatherResponseDto> {
     return this.weatherService.getWeather(cityId, query);

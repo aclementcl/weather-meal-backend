@@ -7,12 +7,12 @@ export interface MenuAiInput {
   temperatureMax: number;
 }
 
-export interface OpenAiResponsesApiResponse {
-  output?: Array<{
-    type?: string;
-    content?: Array<{
-      type?: string;
-      text?: string;
-    }>;
+export interface GeminiGenerateContentResponse {
+  candidates?: Array<{
+    content?: {
+      parts?: Array<{
+        text?: string;
+      }>;
+    };
   }>;
 }

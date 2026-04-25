@@ -1,4 +1,10 @@
-import { Controller, Get, NotFoundException, Param } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  NotFoundException,
+  Param,
+  ParseIntPipe,
+} from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { City, Region } from './locations.types';
 import { LocationsService } from './locations.service';
@@ -33,7 +39,7 @@ export class LocationsController {
     isArray: true,
   })
   @Get('chile/regions/:regionId/cities')
-  getChileCities(@Param('regionId') regionId: string): City[] {
+  getChileCities(@Param('regionId', ParseIntPipe) regionId: number): City[] {
     const region = this.locationsService.findChileRegionById(regionId);
 
     if (!region) {

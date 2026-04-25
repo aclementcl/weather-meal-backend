@@ -6,9 +6,9 @@ import {
 
 export class FavoriteItemDto {
   @ApiProperty({
-    example: 'fav_001',
+    example: 1,
   })
-  id: string;
+  id: number;
 
   @ApiProperty({
     example: 'Santiago',

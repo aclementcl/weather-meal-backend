@@ -6,6 +6,7 @@ import { FavoriteItemDto } from './dto/favorite-item.dto';
 export class FavoritesService {
   private readonly logger = new Logger(FavoritesService.name);
   private favorites: FavoriteItemDto[] = [];
+  private nextId = 1;
 
   getFavorites(): FavoriteItemDto[] {
     try {
@@ -49,7 +50,7 @@ export class FavoritesService {
     }
   }
 
-  deleteFavorite(id: string): void {
+  deleteFavorite(id: number): void {
     try {
       const nextFavorites = this.favorites.filter(
         (favorite) => favorite.id !== id,
@@ -70,8 +71,8 @@ export class FavoritesService {
     }
   }
 
-  private generateId(): string {
-    return `fav_${Math.random().toString(36).slice(2, 10)}`;
+  private generateId(): number {
+    return this.nextId++;
   }
 
   private getErrorMessage(error: unknown): string {

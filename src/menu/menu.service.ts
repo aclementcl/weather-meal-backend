@@ -4,8 +4,8 @@ import {
   MenuSuggestResponseDto,
   SuggestedMenuDto,
 } from './dto/menu-suggest-response.dto';
+import { GeminiMenuProvider } from './gemini-menu.provider';
 import { WeatherService } from '../weather/weather.service';
-import { OpenAiMenuProvider } from './openai-menu.provider';
 
 @Injectable()
 export class MenuService {
@@ -13,11 +13,11 @@ export class MenuService {
 
   constructor(
     private readonly weatherService: WeatherService,
-    private readonly openAiMenuProvider: OpenAiMenuProvider,
+    private readonly geminiMenuProvider: GeminiMenuProvider,
   ) {}
 
   async suggestMenu(
-    cityId: string,
+    cityId: number,
     request: MenuSuggestRequestDto,
   ): Promise<MenuSuggestResponseDto> {
     try {
@@ -28,7 +28,7 @@ export class MenuService {
       const weatherResponse = await this.weatherService.getWeather(cityId, {
         date: request.date,
       });
-      const menu = await this.openAiMenuProvider.suggestMenu({
+      const menu = await this.geminiMenuProvider.suggestMenu({
         location: weatherResponse.location.name,
         date: weatherResponse.date,
         preferences: request.preferences,

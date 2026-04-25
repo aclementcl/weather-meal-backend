@@ -5,6 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { getCurrentChileIsoDate } from '../common/date/chile-date.util';
 import { Location } from '../locations/locations.types';
 import {
   OpenMeteoDailyResponse,
@@ -95,22 +96,11 @@ export class OpenMeteoWeatherProvider {
   }
 
   private getTodayInChile(): string {
-    const parts = new Intl.DateTimeFormat('en', {
-      timeZone: 'America/Santiago',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }).formatToParts(new Date());
-
-    const year = parts.find((part) => part.type === 'year')?.value;
-    const month = parts.find((part) => part.type === 'month')?.value;
-    const day = parts.find((part) => part.type === 'day')?.value;
-
-    if (!year || !month || !day) {
+    try {
+      return getCurrentChileIsoDate();
+    } catch {
       throw new BadGatewayException('Unable to resolve current Chilean date');
     }
-
-    return `${year}-${month}-${day}`;
   }
 
   private getErrorMessage(error: unknown): string {

@@ -3,6 +3,10 @@ import {
   ValidationOptions,
   registerDecorator,
 } from 'class-validator';
+import {
+  addDaysToIsoDate,
+  getCurrentChileIsoDate,
+} from '../date/chile-date.util';
 
 export function IsForecastDate(validationOptions?: ValidationOptions) {
   return (object: object, propertyName: string) => {
@@ -21,9 +25,8 @@ export function IsForecastDate(validationOptions?: ValidationOptions) {
             return false;
           }
 
-          const today = new Date();
-          const minDate = toIsoDate(today);
-          const maxDate = toIsoDate(addDays(today, 6));
+          const minDate = getCurrentChileIsoDate();
+          const maxDate = addDaysToIsoDate(minDate, 6);
 
           return value >= minDate && value <= maxDate;
         },
@@ -39,19 +42,4 @@ function isStrictIsoDate(value: string): boolean {
   const date = new Date(`${value}T00:00:00Z`);
 
   return !Number.isNaN(date.getTime()) && date.toISOString().startsWith(value);
-}
-
-function toIsoDate(date: Date): string {
-  const year = date.getFullYear();
-  const month = `${date.getMonth() + 1}`.padStart(2, '0');
-  const day = `${date.getDate()}`.padStart(2, '0');
-
-  return `${year}-${month}-${day}`;
-}
-
-function addDays(date: Date, days: number): Date {
-  const nextDate = new Date(date);
-  nextDate.setDate(nextDate.getDate() + days);
-
-  return nextDate;
 }

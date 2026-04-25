@@ -1,4 +1,12 @@
-import { Body, Controller, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseIntPipe,
+  Post,
+} from '@nestjs/common';
 import {
   ApiBody,
   ApiNotFoundResponse,
@@ -34,7 +42,7 @@ export class MenuController {
   @HttpCode(HttpStatus.OK)
   @Post()
   suggestMenu(
-    @Param('cityId') cityId: string,
+    @Param('cityId', ParseIntPipe) cityId: number,
     @Body() request: MenuSuggestRequestDto,
   ): Promise<MenuSuggestResponseDto> {
     return this.menuService.suggestMenu(cityId, request);

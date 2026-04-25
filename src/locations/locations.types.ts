@@ -1,11 +1,10 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 
 export class Region {
   @ApiProperty({
-    example: 'metropolitana-de-santiago',
+    example: 7,
   })
-  id: string;
+  id: number;
 
   @ApiProperty({
     example: 'Metropolitana de Santiago',
@@ -15,9 +14,9 @@ export class Region {
 
 export class City {
   @ApiProperty({
-    example: 'santiago',
+    example: 13,
   })
-  id: string;
+  id: number;
 
   @ApiProperty({
     example: 'Santiago',
@@ -25,9 +24,9 @@ export class City {
   name: string;
 
   @ApiProperty({
-    example: 'metropolitana-de-santiago',
+    example: 7,
   })
-  regionId: string;
+  regionId: number;
 
   @ApiProperty({
     example: 'Metropolitana de Santiago',
@@ -46,13 +45,3 @@ export class City {
 }
 
 export class Location extends City {}
-
-export class CitiesQueryDto {
-  @ApiPropertyOptional({
-    example: 'metropolitana-de-santiago',
-    description: 'Optional region identifier returned by /regions.',
-  })
-  @IsOptional()
-  @IsString()
-  regionId?: string;
-}

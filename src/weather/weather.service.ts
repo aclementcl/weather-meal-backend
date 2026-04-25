@@ -18,7 +18,7 @@ export class WeatherService {
   ) {}
 
   async getWeather(
-    cityId: string,
+    cityId: number,
     query: WeatherQueryDto,
   ): Promise<WeatherResponseDto> {
     try {

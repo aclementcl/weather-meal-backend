@@ -1,4 +1,14 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseIntPipe,
+  Post,
+} from '@nestjs/common';
 import {
   ApiCreatedResponse,
   ApiNoContentResponse,
@@ -55,7 +65,7 @@ export class FavoritesController {
   })
   @HttpCode(HttpStatus.NO_CONTENT)
   @Delete(':id')
-  deleteFavorite(@Param('id') id: string): void {
+  deleteFavorite(@Param('id', ParseIntPipe) id: number): void {
     this.favoritesService.deleteFavorite(id);
   }
 }
