@@ -8,7 +8,13 @@ export interface MenuAiInput {
 }
 
 export interface GeminiGenerateContentResponse {
+  promptFeedback?: {
+    blockReason?: string;
+    blockReasonMessage?: string;
+  };
   candidates?: Array<{
+    finishReason?: string;
+    finishMessage?: string;
     content?: {
       parts?: Array<{
         text?: string;

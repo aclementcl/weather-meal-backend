@@ -156,7 +156,7 @@ describe('AppController (e2e)', () => {
       .post('/api/v1/locations/chile/cities/13/menu-suggestions')
       .send({
         date: forecastDate,
-        preferences: ['vegetarian', 'gluten-free'],
+        preferenceIds: [1, 2],
       })
       .expect(200)
       .expect(({ body }) => {
@@ -174,6 +174,19 @@ describe('AppController (e2e)', () => {
             dinner: 'Tortilla de verduras y ensalada tibia',
           },
         });
+      });
+  });
+
+  it('/api/v1/locations/chile/cities/:cityId/menu-suggestions rejects invalid preference ids (POST)', () => {
+    return request(app.getHttpServer())
+      .post('/api/v1/locations/chile/cities/13/menu-suggestions')
+      .send({
+        date: forecastDate,
+        preferenceIds: [999],
+      })
+      .expect(400)
+      .expect(({ body }) => {
+        expect(body.message).toContain('Unsupported dietary preference ids');
       });
   });
 

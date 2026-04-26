@@ -1,9 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   ArrayUnique,
   IsArray,
-  IsNotEmpty,
+  IsInt,
   IsOptional,
   IsString,
 } from 'class-validator';
@@ -21,21 +21,27 @@ export class MenuSuggestRequestDto {
   date: string;
 
   @ApiProperty({
-    example: ['vegetarian', 'gluten-free'],
-    type: [String],
+    example: [1, 2],
+    description:
+      'Stable dietary preference identifiers selected in the frontend.',
+    type: [Number],
     required: false,
   })
   @IsOptional()
   @IsArray()
   @ArrayUnique()
-  @IsString({ each: true })
-  @IsNotEmpty({ each: true })
+  @Type(() => Number)
+  @IsInt({ each: true })
   @Transform(({ value }) =>
     value === undefined
       ? []
       : Array.isArray(value)
-      ? value.map((item) => (typeof item === 'string' ? item.trim() : item))
+      ? value.map((item) =>
+          typeof item === 'string' && item.trim().length > 0
+            ? Number(item)
+            : item,
+        )
       : value,
   )
-  preferences: string[] = [];
+  preferenceIds: number[] = [];
 }

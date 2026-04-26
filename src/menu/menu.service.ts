@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { MenuSuggestRequestDto } from './dto/menu-suggest-request.dto';
 import {
   MenuSuggestResponseDto,
@@ -6,6 +6,7 @@ import {
 } from './dto/menu-suggest-response.dto';
 import { GeminiMenuProvider } from './gemini-menu.provider';
 import { WeatherService } from '../weather/weather.service';
+import { DIETARY_PREFERENCES } from './preferences.constants';
 
 @Injectable()
 export class MenuService {
@@ -24,6 +25,9 @@ export class MenuService {
       this.logger.log(
         `Generating menu suggestion for city ${cityId} on ${request.date}`,
       );
+      const resolvedPreferences = this.resolvePreferenceLabels(
+        request.preferenceIds,
+      );
 
       const weatherResponse = await this.weatherService.getWeather(cityId, {
         date: request.date,
@@ -31,7 +35,7 @@ export class MenuService {
       const menu = await this.geminiMenuProvider.suggestMenu({
         location: weatherResponse.location.name,
         date: weatherResponse.date,
-        preferences: request.preferences,
+        preferences: resolvedPreferences,
         weatherSummary: weatherResponse.weather.summary,
         temperatureMin: weatherResponse.weather.temperatureMin,
         temperatureMax: weatherResponse.weather.temperatureMax,
@@ -61,6 +65,29 @@ export class MenuService {
       lunch: menu.lunch.trim(),
       dinner: menu.dinner.trim(),
     };
+  }
+
+  private resolvePreferenceLabels(preferenceIds: number[]): string[] {
+    if (preferenceIds.length === 0) {
+      return [];
+    }
+
+    const preferenceLookup = new Map(
+      DIETARY_PREFERENCES.map((preference) => [preference.id, preference]),
+    );
+    const invalidPreferenceIds = preferenceIds.filter(
+      (preferenceId) => !preferenceLookup.has(preferenceId),
+    );
+
+    if (invalidPreferenceIds.length > 0) {
+      throw new BadRequestException(
+        `Unsupported dietary preference ids: ${invalidPreferenceIds.join(', ')}`,
+      );
+    }
+
+    return preferenceIds.map(
+      (preferenceId) => preferenceLookup.get(preferenceId)!.promptLabel,
+    );
   }
 
   private getErrorMessage(error: unknown): string {
