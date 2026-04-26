@@ -1,17 +1,29 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { FavoriteCreateDto } from './dto/favorite-create.dto';
 import { FavoriteItemDto } from './dto/favorite-item.dto';
+import { FavoriteEntity } from './entities/favorite.entity';
 
 @Injectable()
 export class FavoritesService {
   private readonly logger = new Logger(FavoritesService.name);
-  private favorites: FavoriteItemDto[] = [];
-  private nextId = 1;
 
-  getFavorites(): FavoriteItemDto[] {
+  constructor(
+    @InjectRepository(FavoriteEntity)
+    private readonly favoriteRepository: Repository<FavoriteEntity>,
+  ) {}
+
+  async getFavorites(): Promise<FavoriteItemDto[]> {
     try {
-      this.logger.log(`Listing ${this.favorites.length} favorites`);
-      return this.favorites;
+      const favorites = await this.favoriteRepository.find({
+        order: {
+          createdAt: 'DESC',
+        },
+      });
+
+      this.logger.log(`Listing ${favorites.length} favorites`);
+      return favorites.map((favorite) => this.toFavoriteItemDto(favorite));
     } catch (error) {
       this.logger.error(
         `Failed to list favorites: ${this.getErrorMessage(error)}`,
@@ -20,28 +32,25 @@ export class FavoritesService {
     }
   }
 
-  createFavorite(request: FavoriteCreateDto): FavoriteItemDto {
+  async createFavorite(request: FavoriteCreateDto): Promise<FavoriteItemDto> {
     try {
-      const favorite: FavoriteItemDto = {
-        id: this.generateId(),
+      const favorite = this.favoriteRepository.create({
         location: request.location.trim(),
         date: request.date,
-        weather: {
-          summary: request.weather.summary.trim(),
-          temperatureMin: request.weather.temperatureMin,
-          temperatureMax: request.weather.temperatureMax,
-        },
-        menu: {
-          breakfast: request.menu.breakfast.trim(),
-          lunch: request.menu.lunch.trim(),
-          dinner: request.menu.dinner.trim(),
-        },
-      };
+        weatherSummary: request.weather.summary.trim(),
+        temperatureMin: request.weather.temperatureMin,
+        temperatureMax: request.weather.temperatureMax,
+        breakfast: request.menu.breakfast.trim(),
+        lunch: request.menu.lunch.trim(),
+        dinner: request.menu.dinner.trim(),
+      });
+      const savedFavorite = await this.favoriteRepository.save(favorite);
 
-      this.favorites = [favorite, ...this.favorites];
-      this.logger.log(`Created favorite ${favorite.id} for ${favorite.location}`);
+      this.logger.log(
+        `Created favorite ${savedFavorite.id} for ${savedFavorite.location}`,
+      );
 
-      return favorite;
+      return this.toFavoriteItemDto(savedFavorite);
     } catch (error) {
       this.logger.error(
         `Failed to create favorite: ${this.getErrorMessage(error)}`,
@@ -50,18 +59,15 @@ export class FavoritesService {
     }
   }
 
-  deleteFavorite(id: number): void {
+  async deleteFavorite(id: number): Promise<void> {
     try {
-      const nextFavorites = this.favorites.filter(
-        (favorite) => favorite.id !== id,
-      );
+      const deleteResult = await this.favoriteRepository.delete(id);
 
-      if (nextFavorites.length === this.favorites.length) {
+      if (!deleteResult.affected) {
         this.logger.warn(`Favorite not found for deletion: ${id}`);
         throw new NotFoundException(`Favorite not found: ${id}`);
       }
 
-      this.favorites = nextFavorites;
       this.logger.log(`Deleted favorite ${id}`);
     } catch (error) {
       this.logger.error(
@@ -71,8 +77,22 @@ export class FavoritesService {
     }
   }
 
-  private generateId(): number {
-    return this.nextId++;
+  private toFavoriteItemDto(favorite: FavoriteEntity): FavoriteItemDto {
+    return {
+      id: favorite.id,
+      location: favorite.location,
+      date: favorite.date,
+      weather: {
+        summary: favorite.weatherSummary,
+        temperatureMin: favorite.temperatureMin,
+        temperatureMax: favorite.temperatureMax,
+      },
+      menu: {
+        breakfast: favorite.breakfast,
+        lunch: favorite.lunch,
+        dinner: favorite.dinner,
+      },
+    };
   }
 
   private getErrorMessage(error: unknown): string {

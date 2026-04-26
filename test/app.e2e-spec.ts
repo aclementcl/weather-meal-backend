@@ -12,6 +12,13 @@ describe('AppController (e2e)', () => {
   const forecastDate = getCurrentChileIsoDate();
 
   beforeEach(async () => {
+    process.env.DB_TYPE = 'sqljs';
+    delete process.env.DB_HOST;
+    delete process.env.DB_PORT;
+    delete process.env.DB_USERNAME;
+    delete process.env.DB_PASSWORD;
+    delete process.env.DB_NAME;
+    delete process.env.DB_LOGGING;
     process.env.GEMINI_API_KEY = 'test-gemini-key';
     delete process.env.GEMINI_BASE_URL;
     delete process.env.GEMINI_MODEL;
@@ -76,6 +83,13 @@ describe('AppController (e2e)', () => {
   });
 
   afterEach(async () => {
+    delete process.env.DB_TYPE;
+    delete process.env.DB_HOST;
+    delete process.env.DB_PORT;
+    delete process.env.DB_USERNAME;
+    delete process.env.DB_PASSWORD;
+    delete process.env.DB_NAME;
+    delete process.env.DB_LOGGING;
     fetchMock.mockRestore();
     delete process.env.GEMINI_API_KEY;
     delete process.env.GEMINI_BASE_URL;

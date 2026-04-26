@@ -38,7 +38,7 @@ export class FavoritesController {
     isArray: true,
   })
   @Get()
-  getFavorites(): FavoriteItemDto[] {
+  getFavorites(): Promise<FavoriteItemDto[]> {
     return this.favoritesService.getFavorites();
   }
 
@@ -50,7 +50,7 @@ export class FavoritesController {
     type: FavoriteItemDto,
   })
   @Post()
-  createFavorite(@Body() request: FavoriteCreateDto): FavoriteItemDto {
+  createFavorite(@Body() request: FavoriteCreateDto): Promise<FavoriteItemDto> {
     return this.favoritesService.createFavorite(request);
   }
 
@@ -65,7 +65,7 @@ export class FavoritesController {
   })
   @HttpCode(HttpStatus.NO_CONTENT)
   @Delete(':id')
-  deleteFavorite(@Param('id', ParseIntPipe) id: number): void {
-    this.favoritesService.deleteFavorite(id);
+  deleteFavorite(@Param('id', ParseIntPipe) id: number): Promise<void> {
+    return this.favoritesService.deleteFavorite(id);
   }
 }

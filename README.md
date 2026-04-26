@@ -1,98 +1,136 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# WeatherMeal Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Backend NestJS para el challenge WeatherMeal. Expone APIs versionadas para:
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+- regiones y ciudades de Chile
+- clima normalizado
+- sugerencias de menú con Gemini
+- favoritos persistidos en PostgreSQL con TypeORM
 
-## Description
+Swagger queda disponible en `http://localhost:3000/api/docs`.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Requisitos
 
-## Project setup
+- Node.js 22+
+- npm 10+
+- PostgreSQL 16+ o Docker
 
-```bash
-$ npm install
-```
+## Variables de entorno
 
-## Compile and run the project
+Copia `.env.sample` a `.env` y ajusta los valores.
 
-```bash
-# development
-$ npm run start
+Variables principales:
 
-# watch mode
-$ npm run start:dev
+- `PORT`: puerto HTTP de Nest
+- `DB_TYPE`: `postgres` para ejecución normal, `sqljs` para tests en memoria
+- `DB_HOST`
+- `DB_PORT`
+- `DB_USERNAME`
+- `DB_PASSWORD`
+- `DB_NAME`
+- `DB_LOGGING`
+- `GEMINI_API_KEY`
+- `GEMINI_MODEL`
+- `GEMINI_BASE_URL`
+- `WEATHER_API_FORECAST_BASE_URL`
+- `WEATHER_API_ARCHIVE_BASE_URL`
 
-# production mode
-$ npm run start:prod
-```
-
-## Run tests
+## Instalación
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+npm install
 ```
 
-## Deployment
+## Base de datos y migraciones
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+La persistencia de favoritos usa TypeORM y migraciones.
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+Comandos disponibles:
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+npm run migration:create
+npm run migration:generate
+npm run migration:run
+npm run migration:revert
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+Migración incluida:
 
-## Resources
+- `src/database/migrations/20260426000000-create-favorites-table.ts`
 
-Check out a few resources that may come in handy when working with NestJS:
+## Ejecución local
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+1. Levanta PostgreSQL.
+2. Ejecuta migraciones.
+3. Inicia la aplicación.
 
-## Support
+```bash
+npm run migration:run
+npm run start:dev
+```
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+Producción local:
 
-## Stay in touch
+```bash
+npm run build
+npm run migration:run:prod
+npm run start:prod
+```
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+## Docker
 
-## License
+El repositorio incluye:
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+- `Dockerfile` para la API
+- `docker-compose.yml` para API + PostgreSQL
+
+Levantar todo:
+
+```bash
+docker compose up --build
+```
+
+Comportamiento del contenedor de la API:
+
+- espera que PostgreSQL esté sano
+- ejecuta `npm run migration:run:prod`
+- levanta Nest con `npm run start:prod`
+
+Servicios expuestos:
+
+- API: `http://localhost:3000`
+- Swagger: `http://localhost:3000/api/docs`
+- PostgreSQL: `localhost:5432`
+
+## Tests
+
+Los tests e2e usan `sqljs` en memoria, así que no requieren PostgreSQL externo.
+
+```bash
+npm test
+npm run test:e2e
+```
+
+## Endpoints principales
+
+- `GET /api/v1/locations/chile/regions`
+- `GET /api/v1/locations/chile/regions/:regionId/cities`
+- `GET /api/v1/locations/chile/cities/:cityId/weather?date=YYYY-MM-DD`
+- `POST /api/v1/locations/chile/cities/:cityId/menu-suggestions`
+- `GET /api/v1/favorites`
+- `POST /api/v1/favorites`
+- `DELETE /api/v1/favorites/:id`
+
+## Persistencia de favoritos
+
+Los favoritos ya no viven en memoria. Se almacenan en la tabla `favorites` con estos datos:
+
+- ubicación
+- fecha
+- resumen del clima
+- temperatura mínima y máxima
+- desayuno
+- almuerzo
+- cena
+
+El contrato HTTP de `favorites` se mantiene estable; cambió solo la implementación interna.
