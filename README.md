@@ -1,19 +1,119 @@
 # WeatherMeal Backend
 
-Backend NestJS para el challenge WeatherMeal. Expone APIs versionadas para:
+La API expone:
 
-- regiones y ciudades de Chile
-- clima normalizado
-- sugerencias de menú con Gemini
-- favoritos persistidos en PostgreSQL con TypeORM
+- catálogo de regiones y ciudades de Chile
+- consulta de clima normalizado para frontend
+- sugerencia de menú basada en clima + preferencias
+- persistencia de favoritos
 
 Swagger queda disponible en `http://localhost:3000/api/docs`.
 
-## Requisitos
+## Objetivo y enfoque
 
-- Node.js 22+
-- npm 10+
-- PostgreSQL 16+ o Docker
+Prioridades:
+
+1. contratos HTTP estables y fáciles de consumir desde Angular
+2. separación razonable entre catálogo, clima, menú y favoritos
+3. dependencias externas encapsuladas
+4. despliegue reproducible
+5. decisiones explícitas, aunque no necesariamente “enterprise-grade”
+
+
+## Decisiones técnicas
+
+### 1. NestJS como framework
+
+- controllers para contrato HTTP
+- services para lógica de aplicación
+- providers para integraciones externas
+- módulos para separar contexto
+
+### 2. Versionado de API y Swagger
+
+La API está versionada en URI bajo `/api/v1/...`.
+
+- permite evolucionar contratos sin romper clientes
+- deja Swagger alineado con el contrato real
+- es la opción más simple para un MVP
+
+### 3. Catálogo estático de ubicaciones
+
+No usé geocoding externo para regiones/ciudades. El catálogo está en [src/locations/locations.data.ts](src/locations/locations.data.ts).
+
+
+### 4. Rutas REST anidadas
+
+Las rutas quedaron así:
+
+- `GET /api/v1/locations/chile/regions`
+- `GET /api/v1/locations/chile/regions/:regionId/cities`
+- `GET /api/v1/locations/chile/cities/:cityId/weather`
+- `POST /api/v1/locations/chile/cities/:cityId/menu-suggestions`
+
+La decisión fue modelar explícitamente la relación:
+
+- país -> regiones -> ciudades
+- ciudad -> clima
+- ciudad -> sugerencias de menú
+
+Eso hace la API más legible que pasar todo por query strings o cuerpos ambiguos.
+
+### 5. DTOs y validación
+
+Usé DTOs con `class-validator` y `ValidationPipe` global.
+
+Razón:
+
+- centraliza validación de input
+- hace los contratos visibles en código y Swagger
+- evita lógica de validación manual dispersa
+
+### 6. Open-Meteo para clima
+
+La integración de clima usa Open-Meteo.
+
+Razón:
+
+- no requiere key para el MVP
+- tiene forecast diario con `weather_code`, mínimas y máximas
+- tiene endpoint histórico, lo que evita amarrarse solo al presente
+
+La integración está encapsulada en [src/weather/open-meteo-weather.provider.ts](src/weather/open-meteo-weather.provider.ts).
+
+### 7. Gemini para sugerencia de menú
+
+La sugerencia de menú usa Gemini.
+
+Razón:
+
+- permite generar sugerencias textuales sin entrenar nada específico
+
+
+### 8. Favoritos con PostgreSQL y TypeORM
+
+Los favoritos persisten con PostgreSQL y TypeORM.
+
+- repositorios simples
+- entidades claras
+- migraciones versionadas
+
+## Estructura del proyecto
+
+Principales módulos:
+
+- `locations`: catálogo y resolución de regiones/ciudades
+- `weather`: consulta y normalización de clima
+- `menu`: prompt, llamada a IA y normalización/fallback
+- `favorites`: persistencia de sugerencias guardadas
+- `database`: configuración TypeORM y migraciones
+
+La separación intencional es:
+
+- `controller`: expone HTTP
+- `service`: orquesta casos de uso
+- `provider`: habla con servicios externos
+- `dto`: contrato de entrada/salida
 
 ## Variables de entorno
 
@@ -21,8 +121,8 @@ Copia `.env.sample` a `.env` y ajusta los valores.
 
 Variables principales:
 
-- `PORT`: puerto HTTP de Nest
-- `DB_TYPE`: `postgres` para ejecución normal, `sqljs` para tests en memoria
+- `PORT`
+- `DB_TYPE`
 - `DB_HOST`
 - `DB_PORT`
 - `DB_USERNAME`
@@ -35,36 +135,34 @@ Variables principales:
 - `WEATHER_API_FORECAST_BASE_URL`
 - `WEATHER_API_ARCHIVE_BASE_URL`
 
-## Instalación
+
+## Cómo correrlo localmente
+
+### Opción 1: Docker Compose
+
+Es la opción más simple para levantar API + PostgreSQL.
+
+```bash
+docker compose up --build
+```
+
+Esto:
+
+- levanta PostgreSQL
+- levanta la API
+- corre migraciones al arrancar la app
+
+URLs:
+
+- API: `http://localhost:3000`
+- Swagger: `http://localhost:3000/api/docs`
+
+### Opción 2: Sin Docker
+
+Necesitas PostgreSQL disponible.
 
 ```bash
 npm install
-```
-
-## Base de datos y migraciones
-
-La persistencia de favoritos usa TypeORM y migraciones.
-
-Comandos disponibles:
-
-```bash
-npm run migration:create
-npm run migration:generate
-npm run migration:run
-npm run migration:revert
-```
-
-Migración incluida:
-
-- `src/database/migrations/20260426000000-create-favorites-table.ts`
-
-## Ejecución local
-
-1. Levanta PostgreSQL.
-2. Ejecuta migraciones.
-3. Inicia la aplicación.
-
-```bash
 npm run migration:run
 npm run start:dev
 ```
@@ -77,113 +175,24 @@ npm run migration:run:prod
 npm run start:prod
 ```
 
-## Docker
+## Base de datos y migraciones
 
-El repositorio incluye:
+Migración incluida:
 
-- `Dockerfile` para la API
-- `docker-compose.yml` para API + PostgreSQL
+- [src/database/migrations/20260426000000-create-favorites-table.ts](src/database/migrations/20260426000000-create-favorites-table.ts)
 
-Levantar todo:
-
-```bash
-docker compose up --build
-```
-
-Comportamiento del contenedor de la API:
-
-- espera que PostgreSQL esté sano
-- ejecuta `npm run migration:run:prod`
-- levanta Nest con `npm run start:prod`
-
-Servicios expuestos:
-
-- API: `http://localhost:3000`
-- Swagger: `http://localhost:3000/api/docs`
-- PostgreSQL: `localhost:5432`
-
-## CI/CD con GitHub Actions
-
-El repositorio incluye el workflow [deploy.yml](.github/workflows/deploy.yml), que despliega automáticamente al Droplet en cada `push` a `main`.
-
-Flujo del pipeline:
-
-- ejecuta `npm ci`
-- compila la app
-- corre `npm run test:e2e -- --runInBand`
-- se conecta por SSH al Droplet
-- sincroniza el repositorio con `rsync`
-- ejecuta `docker compose up --build -d` en el servidor
-
-### Secretos de GitHub requeridos
-
-En `Settings > Secrets and variables > Actions`, crea estos secretos:
-
-- `DROPLET_HOST`: IP o hostname del Droplet
-- `DROPLET_USER`: usuario SSH del Droplet
-- `DROPLET_SSH_KEY`: llave privada SSH usada por GitHub Actions
-
-Opcionalmente puedes definir variables de Actions:
-
-- `DROPLET_PORT`: por defecto `22`
-- `DEPLOY_PATH`: por defecto `/opt/weathermeal/backend`
-
-GitHub Docs sobre secrets:
-
-- https://docs.github.com/en/actions/how-tos/administering-github-actions/sharing-workflows-secrets-and-runners-with-your-organization
-
-### Preparación mínima del Droplet
-
-Antes del primer deploy:
-
-1. instala Docker y Docker Compose plugin
-2. instala `rsync`
-3. crea el directorio de despliegue, por ejemplo `/opt/weathermeal/backend`
-4. crea manualmente el archivo `.env` dentro de ese directorio
-5. asegúrate de que el usuario SSH pueda ejecutar `docker compose`
-6. agrega la clave pública correspondiente a `DROPLET_SSH_KEY` en `~/.ssh/authorized_keys`
-
-Ejemplo:
+Comandos:
 
 ```bash
-sudo apt update
-sudo apt install -y rsync git
-mkdir -p /opt/weathermeal/backend
-cd /opt/weathermeal/backend
-nano .env
+npm run migration:create
+npm run migration:generate
+npm run migration:run
+npm run migration:revert
 ```
-
-El archivo `.env` no se sincroniza desde GitHub Actions. Se mantiene en el servidor.
 
 ## Tests
-
-Los tests e2e usan `sqljs` en memoria, así que no requieren PostgreSQL externo.
 
 ```bash
 npm test
 npm run test:e2e
 ```
-
-## Endpoints principales
-
-- `GET /api/v1/locations/chile/regions`
-- `GET /api/v1/locations/chile/regions/:regionId/cities`
-- `GET /api/v1/locations/chile/cities/:cityId/weather?date=YYYY-MM-DD`
-- `POST /api/v1/locations/chile/cities/:cityId/menu-suggestions`
-- `GET /api/v1/favorites`
-- `POST /api/v1/favorites`
-- `DELETE /api/v1/favorites/:id`
-
-## Persistencia de favoritos
-
-Los favoritos ya no viven en memoria. Se almacenan en la tabla `favorites` con estos datos:
-
-- ubicación
-- fecha
-- resumen del clima
-- temperatura mínima y máxima
-- desayuno
-- almuerzo
-- cena
-
-El contrato HTTP de `favorites` se mantiene estable; cambió solo la implementación interna.
